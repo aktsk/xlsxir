@@ -3,7 +3,7 @@ defmodule Xlsxir.ParseString do
   Holds the SAX event instructions for parsing sharedString data via `Xlsxir.SaxParser.parse/2`
   """
 
-  defstruct empty_string: true, family: false, family_string: "", index: 0, tid: nil
+  defstruct empty_string: true, family: false, family_string: "", index: 0, tid: nil, rph: false
 
   @doc """
   Sax event utilized by `Xlsxir.SaxParser.parse/2`. Takes a pattern and the current state of a struct and recursivly parses the
@@ -24,14 +24,22 @@ defmodule Xlsxir.ParseString do
 
   def sax_event_handler({:startElement,_,'si',_,_}, %__MODULE__{tid: tid, index: index}), do: %__MODULE__{tid: tid, index: index}
 
+  def sax_event_handler({:startElement,_,'rPh',_,_}, state) do
+    %{state | rph: true}
+  end
+
   def sax_event_handler({:startElement,_,'family',_,_}, state) do
     %{state | family: true}
   end
 
   def sax_event_handler({:characters, value},
     %__MODULE__{family_string: fam_str} = state) do
-      value = value |> to_string
-      %{state | family_string: fam_str <> value}
+      if state.rph do
+        %{state | family_string: fam_str}
+      else
+        value = value |> to_string
+        %{state | family_string: fam_str <> value}
+      end
   end
 
   def sax_event_handler({:endElement,_,'si',_},
